@@ -1,20 +1,20 @@
 var exec = require('cordova/exec');
 
 var lokasi = {
-   location: function(fnSuccess, fnError){
+   coordinate: function(fnSuccess, fnError){
       /*
-       * fnSuccess:{latitude:xxx, longitude:yyy}
+       * fnSuccess: {latitude:xxx, longitude:yyy}
        */
-      exec(fnSuccess, fnError, "Lokasi", "location", []);
+      exec(fnSuccess, fnError, "Lokasi", "coordinate", []);
    },
    address: function(fnSuccess, fnError){
       exec(fnSuccess, fnError, "Lokasi", "address", []);
    },
-   addressByLocation: function(fnSuccess, fnError, latitude, longitude){
+   addressByCoordinate: function(fnSuccess, fnError, latitude, longitude){
       /*
-       * fnSuccess:{address:["","",""], postalCode:"09090"}
+       * fnSuccess: {address:["","",""], postalCode:"09090"}
        */
-      exec(fnSuccess, fnError, "Lokasi", "addressByLocation", [latitude, longitude]);
+      exec(fnSuccess, fnError, "Lokasi", "addressByCoordinate", [latitude, longitude]);
    }
 };
 
