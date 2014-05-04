@@ -1,79 +1,101 @@
 package org.apache.cordova.sipkita;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
+import java.util.Map;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
+import android.content.Context;
 import android.content.Intent;
 import android.location.Address;
+import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.Handler;
+import android.provider.Settings;
 import android.util.Log;
 
 public class Lokasi extends CordovaPlugin implements LocationListener {
 	private static final String LOG_TAG = "Lokasi";
+	private LocationManager locationManager;
+	private String provider;
 
 	public Lokasi() {}
 
 	@Override
 	public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-		if (action.equals("koordinat")) {
+		if (action.equals("coordinate")) {
+			coordinate(callbackContext);
 			return true;
 		} else if (action.equals("address")) {
+			address(callbackContext);
 			return true;
-		} else if (action.equals("addressByKoordinat")) {
+		} else if (action.equals("addressByCoordinate")) {
+			double latitude = args.getDouble(0);
+			double longitude = args.getDouble(1);
+			addressByCoordinate(callbackContext, latitude, longitude);
 			return true;
 		}
 		return false;
 	}
 
-	void locationByCorrdinate(CallbackContext callbackContext, int LATITUDE, int LONGITUDE) {
-		LocationManager service = (LocationManager) getSystemService(LOCATION_SERVICE);
-		boolean enabled = service
-				.isProviderEnabled(LocationManager.GPS_PROVIDER);
-		// check if enabled and if not send user to the GSP settings
-		// Better solution would be to display a dialog and suggesting to 
-		// go to the settings
-		if (!enabled) {
-			Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-			this.cordova.getActivity().startActivity(intent);
-		}
+	private void addressByCoordinate(CallbackContext callbackContext, double latitude, double longitude) {
 		Geocoder geocoder = new Geocoder(this.cordova.getActivity());
 		try {
-			List<Address> addresses = geocoder.getFromLocation(LATITUDE, LONGITUDE, 1);
+			List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
 			if (addresses != null) {
 				Address returnedAddress = addresses.get(0);
-				StringBuilder strReturnedAddress = new StringBuilder("Address:\n");
+				JSONObject json = new JSONObject();
+				json.put("postalCode", returnedAddress.getPostalCode());
+				JSONArray jArray = new JSONArray();
+//				StringBuilder strReturnedAddress = new StringBuilder("Address:\n");
 				for (int i = 0; i < returnedAddress.getMaxAddressLineIndex(); i++) {
-					strReturnedAddress.append(returnedAddress.getAddressLine(i)).append("\n");
+					jArray.put(i, returnedAddress.getAddressLine(i));
+//					strReturnedAddress.append(returnedAddress.getAddressLine(i)).append("\n");
 				}
-				myAddress.setText(strReturnedAddress.toString());
+//				longitudeField.setText(strReturnedAddress.toString());
+				json.put("address", jArray);
+				callbackContext.success(json);
 			}
 			else {
 				callbackContext.error("No Address returned!");
 			}
-		} catch (IOException e) {
+		} catch (Exception e) {
 			String errMsg = e.getMessage();
 			Log.e(LOG_TAG, errMsg);
 			e.printStackTrace();
 			callbackContext.error(errMsg);
+		}
+	}
+
+	private void address(CallbackContext callbackContext) {}
+
+	private void coordinate(CallbackContext callbackContext) {
+		locationManager = (LocationManager) this.cordova.getActivity().getSystemService(Context.LOCATION_SERVICE);
+		Criteria criteria = new Criteria();
+		provider = locationManager.getBestProvider(criteria, false);
+		Location location = locationManager.getLastKnownLocation(provider);
+		boolean enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+		if (!enabled) {
+			Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+			this.cordova.getActivity().startActivity(intent);
+		}
+		if (location != null) {
+//			System.out.println("Provider " + provider + " has been selected.");
+			onLocationChanged(location);
+			Map<String, Double> map = new HashMap<String, Double>();
+			map.put("latitude", location.getLatitude());
+			map.put("longitude", location.getLongitude());
+			JSONObject json = new JSONObject(map);
+			callbackContext.success(json);
+		} else {
+			callbackContext.error("Location not available");
 		}
 	}
 
@@ -89,3 +111,20 @@ public class Lokasi extends CordovaPlugin implements LocationListener {
 	@Override
 	public void onProviderDisabled(String provider) {}
 }
+/*
+	ctx.getContext() replaced with cordova.getContext() 
+	ctx.startActivity() replaced with cordova.getActivity().startActivity() 
+	ctx.getSystemService() replaced with cordova.getActivity().getSystemService() 
+	ctx.getAssets() replaced with cordova.getActivity().getAssets() 
+	ctx.runOnUiThread() replaced with cordova.getActivity().runOnUiThread() 
+	ctx.getApplicationContext() replaced with 
+	cordova.getActivity().getApplicationContext() 
+	ctx.getPackageManager() replaced with cordova.getActivity().getPackageManager() 
+	ctx.getSharedPreferences() replaced with 
+	cordova.getActivity().getSharedPreferences() 
+	ctx.unregisterActivity() replaced with 
+	cordova.getActivity().unregisterActivity() 
+	ctx.getResources() replaced with cordova.getActivity().getResources() 
+	import com.phonegap.api.* replaced with import org.apache.cordova.api.* 
+
+*/
